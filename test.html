@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luma video test</title>
+<style>
+  body { background: #0b0f14; color: #e9eef3; font: 16px -apple-system, system-ui, sans-serif; margin: 0; padding: 16px; }
+  button { font: inherit; margin: 4px 4px 4px 0; padding: 10px 14px; border-radius: 10px; border: 1px solid #333a42; background: #1a1f25; color: inherit; }
+  .file { margin: 14px 0; padding: 12px; border: 1px solid #262c33; border-radius: 12px; }
+  video, iframe { width: 100%; aspect-ratio: 16 / 9; background: #000; border: 0; margin-top: 8px; }
+  #st, .result { font-weight: 600; margin: 8px 0; }
+</style>
+</head>
+<body>
+<h2>Luma video test</h2>
+<p>Sign in, then try A, B and C on one video. Tell me which show ✅.</p>
+<button id="signin">1. Sign in with Google</button>
+<div id="st">Not signed in.</div>
+<div id="files"></div>
+<div id="out"></div>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script>
+  // Test only: which way can Safari on iPhone play a private Drive video?
+  var CLIENT = '493442948393-hmgi9trb17slmmmvcbabd4gbsf4tbg41.apps.googleusercontent.com';
+  var SCOPE = 'https://www.googleapis.com/auth/drive';
+  var token = '';
+  var $ = function (id) { return document.getElementById(id); };
+
+  $('signin').onclick = function () {
+    google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT, scope: SCOPE,
+      callback: function (r) {
+        if (r.error) { $('st').textContent = '❌ Sign-in error: ' + r.error; return; }
+        token = r.access_token;
+        $('st').textContent = '✅ Signed in.';
+        startWorker();
+        listVideos();
+      }
+    }).requestAccessToken();
+  };
+
+  function listVideos() {
+    var q = encodeURIComponent("mimeType contains 'video/' and trashed=false");
+    fetch('https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(id,name)&q=' + q, { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var h = '';
+        (d.files || []).forEach(function (f) {
+          h += '<div class="file">' + f.name.replace(/</g, '&lt;') + '<br>' +
+            '<button onclick="tryA(\'' + f.id + '\')">A: token in address</button>' +
+            '<button onclick="tryB(\'' + f.id + '\')">B: background helper</button>' +
+            '<button onclick="tryC(\'' + f.id + '\')">C: Drive player</button></div>';
+        });
+        $('files').innerHTML = h || 'No videos found.';
+      })
+      .catch(function (e) { $('files').textContent = '❌ Could not list videos: ' + e; });
+  }
+
+  function media(id) { return 'https://www.googleapis.com/drive/v3/files/' + id + '?alt=media'; }
+
+  function play(src, label) {
+    $('out').innerHTML = '<p>' + label + '</p><video controls playsinline autoplay muted src="' + src + '"></video><div class="result" id="vs">Loading…</div>';
+    var v = $('out').querySelector('video');
+    v.onloadeddata = function () { $('vs').textContent = '✅ ' + label + ' works'; };
+    v.onerror = function () { $('vs').textContent = '❌ ' + label + ' failed (error ' + (v.error && v.error.code) + ')'; };
+    $('out').scrollIntoView();
+  }
+
+  function tryA(id) { play(media(id) + '&access_token=' + encodeURIComponent(token), 'A'); }
+
+  function tryB(id) {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+      $('out').innerHTML = '<div class="result">❌ B: the background helper is not running (reload the page once, sign in again, then try B)</div>';
+      return;
+    }
+    navigator.serviceWorker.controller.postMessage(token);
+    play(media(id) + '&sw=1', 'B');
+  }
+
+  function tryC(id) {
+    $('out').innerHTML = '<p>C: Drive player. Does the video play inside the box?</p>' +
+      '<iframe src="https://drive.google.com/file/d/' + id + '/preview" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+    $('out').scrollIntoView();
+  }
+
+  function startWorker() {
+    if (!navigator.serviceWorker) return;
+    navigator.serviceWorker.register('sw.js').then(function () { return navigator.serviceWorker.ready; })
+      .then(function (reg) { if (reg.active) reg.active.postMessage(token); });
+  }
+</script>
+</body>
+</html>

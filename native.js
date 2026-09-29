@@ -564,11 +564,19 @@
     if (player) return player;
     var wrap = document.createElement('div');
     wrap.id = 'player';
-    wrap.innerHTML = '<div class="pbar"><div class="ptitle"></div><button class="pclose" aria-label="Close">✕</button></div>' +
+    wrap.innerHTML = '<div class="pbar"><div class="ptitle"></div>' +
+      '<button class="pnext">Next episode ›</button><button class="pclose" aria-label="Close">✕</button></div>' +
       '<video playsinline controls autoplay preload="auto"></video>';
     document.body.appendChild(wrap);
-    player = { wrap: wrap, v: wrap.querySelector('video'), title: wrap.querySelector('.ptitle') };
+    player = { wrap: wrap, v: wrap.querySelector('video'), title: wrap.querySelector('.ptitle'), next: wrap.querySelector('.pnext') };
     wrap.querySelector('.pclose').onclick = stop;
+    // As the tablet's next button: on to the next episode, keeping this one's place.
+    player.next.onclick = function () {
+      if (!spec || idx >= spec.items.length - 1) return;
+      saveProgress(false);
+      startItem(idx + 1, 0);
+      tell('onItem', idx);
+    };
     player.v.addEventListener('ended', onEnded);
     player.v.addEventListener('error', onError);
     return player;
@@ -579,6 +587,7 @@
     idx = i;
     currentId = it.id;
     p.title.textContent = it.title.replace('\n', ' · ');
+    p.next.style.display = i < spec.items.length - 1 ? '' : 'none';
     p.v.src = it.url;
     if (startSec > 0) {
       var seek = function () { p.v.currentTime = startSec; p.v.removeEventListener('loadedmetadata', seek); };
@@ -662,7 +671,8 @@
 
   // Leaving the app (Home, lock): keep the place, and send it while the sign-in is live.
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) return;
+    // Back in front: pick up what this user watched on another device meanwhile.
+    if (!document.hidden) { if (window.App && App.onResume) App.onResume(); return; }
     if (player && player.wrap.style.display === 'flex') { saveProgress(false); player.v.pause(); }
     serial(function () { return uploadIfChanged(true); });
   });

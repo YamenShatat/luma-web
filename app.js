@@ -85,6 +85,7 @@
   var acct = store.get('acct', null);          // { name, root }: the chosen Drive folder
   var user = store.get('user', null);          // this device's username; its data lives in Drive
   var picking = false;                         // signing in to choose a folder (not the start-up check)
+  var bootAt = Date.now();
   var prefs = store.get('prefs', {});
 
   // Accent colour (Settings > Appearance). All light enough for the dark text used on accent fills.
@@ -389,11 +390,26 @@
       '<button class="f tile" data-go="series">' + ic('stack') + '<div class="h">Series</div><div class="p">Shows and full seasons.</div></button>' +
       '<button class="f tile" data-go="later">' + ic('bookmark') + '<div class="h">Watch later</div><div class="p">Saved for later.</div></button>' +
       '</div></div>' +
+      '<div id="cwhome"></div>' +
       '<div class="sec-h"><h2>Recently added</h2><button class="f link" data-go="recent">View all ›</button></div>' +
       '<div id="homerail"></div>';
+    cwRail();
     homeRail();
     settle(r);
   };
+  // Continue watching, above Recently added, only when there is something in it: movies with
+  // a resume point and series not yet finished, newest first (as the Movies/Series category).
+  var cwHome = [];
+  function cwRail() {
+    var el = $('#cwhome');
+    if (!el) return;
+    cwHome = [];
+    each(cw, function (it) { if (it.k === 's' || progress['m' + it.id]) cwHome.push(it); });
+    var h = '';
+    each(cwHome, function (it, i) { h += card(it, i, 'homecw', { badge: true, cw: true }); });
+    el.innerHTML = h ? '<div class="sec-h"><h2>Continue watching</h2></div><div class="rail">' + h + '</div>' : '';
+  }
+  ACTS.homecw = function (el, i) { open(cwHome[i]); };
   var homeItems = [];
   function homeRail() {
     var el = $('#homerail');
@@ -980,6 +996,13 @@
     // The names are only for quick checks on the page; they are never listed.
     onUsers: function (json, err) {
       if (!err) knownUsers = JSON.parse(json);
+    },
+    // The app came back to the front: pick up what this user watched on another device
+    // meanwhile. Not while a video plays, nor right after start (start-up already did it).
+    onResume: function () {
+      if (!acct || !user || nowPlaying || Date.now() - bootAt < 10000) return;
+      pendingUser = user;
+      N.selectUser(acct.root, user, false);
     },
     onLoggedOut: function (err) {
       if (err) { toast(err); return; }

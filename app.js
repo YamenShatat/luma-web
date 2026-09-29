@@ -1004,6 +1004,15 @@
       pendingUser = user;
       N.selectUser(acct.root, user, false);
     },
+    // A later change from another device replaced this device's copy: redraw with it (not over
+    // a playing video; the next page drawn uses it anyway).
+    onSynced: function () {
+      reloadUserData();
+      if (nowPlaying) return;
+      if (cur.v === 'movie') movieButtons(cur.a);
+      else if (cur.v === 'show' && $('#eps')) renderSeasons();
+      else if (cur.v !== 'who') show(cur.v, cur.a, snapshot());
+    },
     onLoggedOut: function (err) {
       if (err) { toast(err); return; }
       user = null;

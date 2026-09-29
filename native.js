@@ -496,33 +496,60 @@
   var chain = Promise.resolve();
   function serial(fn) { chain = chain.then(fn, fn); return chain; }
 
-  /** Sends the user's data when it changed; in the background only with a live sign-in. */
-  async function uploadIfChanged(background) {
-    var user = savedString('user'), root = acctRoot();
-    if (!user || !root || ls.get('dirty') !== '1') return;
+  // Each change is timed, so when two devices changed the data, the later change wins, whichever
+  // device happens to send first (as MainActivity.changed).
+  function changed() { ls.set('dirty', '1'); ls.set('changedAt', String(Date.now())); }
+
+  /**
+   * As MainActivity.syncUser: brings this device and the user's file together; the later change
+   * wins. onlyIfChanged: skip when nothing changed here (the regular upload); otherwise also take
+   * the file's newer changes. background: only with a live sign-in (no "Continue" box).
+   */
+  async function syncUser(onlyIfChanged, background) {
+    var user = savedString('user'), root = acctRoot(), dirty = ls.get('dirty') === '1';
+    if (!user || !root || (onlyIfChanged && !dirty)) return;
     if (background && !tokenOk()) return;
-    ls.set('dirty', '0');
     try {
-      var o = {};
-      SYNCED.forEach(function (k) { var v = ls.get(k); if (v != null) o[k] = JSON.parse(v); });
-      o.saved = Date.now();
-      await saveUser(root, user, JSON.stringify(o));
-      console.log('uploaded ' + user + ': ' + summary(o));
+      var data = await loadUser(root, user);
+      var remote = data == null ? null : JSON.parse(data);
+      var mine = +(ls.get('changedAt') || 0), theirs = remote ? +(remote.changed || 0) : -1;
+      if (dirty && mine >= theirs) {
+        var o = {};
+        SYNCED.forEach(function (k) { var v = ls.get(k); if (v != null) o[k] = JSON.parse(v); });
+        o.changed = mine;
+        o.saved = Date.now();
+        await saveUser(root, user, JSON.stringify(o));
+        // A change made while sending stays marked, for the next round.
+        if (+(ls.get('changedAt') || 0) === mine) ls.set('dirty', '0');
+        console.log('uploaded ' + user + ': ' + summary(o));
+      } else if (remote && theirs !== mine) {
+        SYNCED.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } });
+        SYNCED.forEach(function (k) { if (k in remote) ls.set(k, JSON.stringify(remote[k])); });
+        ls.set('changedAt', String(theirs));
+        ls.set('dirty', '0');
+        console.log('took the newer copy of ' + user + ' from Drive: ' + summary(remote));
+        if (window.App && App.onSynced) App.onSynced();
+      }
     } catch (e) {
-      ls.set('dirty', '1');
-      console.log('upload failed, will retry: ' + errText(e));
+      console.log('sync failed, will retry: ' + errText(e));
     }
   }
 
   function selectUser(root, name, create) {
     serial(async function () {
       try {
+        // The same user again (the app started, or came back): just sync.
+        if (!create && name === savedString('user')) {
+          await syncUser(false, false);
+          tell('onUser', true, '');
+          return;
+        }
         if (create && await taken(root, name, null)) {
           tell('onUser', false, '"' + name + '" is already taken. If it is you, tap Log in.');
           return;
         }
         var first = !savedString('user');
-        await uploadIfChanged(false);
+        await syncUser(true, false); // the previous user's unsent changes
         // Unsent changes must not be replaced by the older copy in Drive.
         if (!first && ls.get('dirty') === '1') {
           tell('onUser', false, 'Could not save to Drive, so this device keeps its own copy for now. Check the connection, and that you can edit the "' + USERS + '" folder.');
@@ -537,11 +564,14 @@
         if (data != null) {
           var o = JSON.parse(data);
           SYNCED.forEach(function (k) { if (k in o) ls.set(k, JSON.stringify(o[k])); });
+          ls.set('changedAt', String(+(o.changed || 0)));
+          ls.set('dirty', '0');
           console.log('loaded ' + name + ': ' + summary(o));
+        } else {
+          changed(); // a new name is uploaded at once, so other devices find it
         }
         ls.set('user', JSON.stringify(name));
-        ls.set('dirty', data == null ? '1' : '0'); // a new name is uploaded at once, so other devices find it
-        await uploadIfChanged(false);
+        await syncUser(true, false);
         tell('onUser', true, '');
       } catch (e) {
         tell('onUser', false, errText(e));
@@ -554,7 +584,7 @@
     ls.set('user', 'null');
   }
 
-  setInterval(function () { serial(function () { return uploadIfChanged(true); }); }, 30000);
+  setInterval(function () { serial(function () { return syncUser(true, true); }); }, 30000);
 
   // ---------- player: Safari's own, fed through sw.js ----------
 
@@ -655,17 +685,28 @@
     if (!(dur > 0) && !ended) return;
     var all;
     try { all = JSON.parse(ls.get('progress') || '{}') || {}; } catch (e) { all = {}; }
-    if (!ended && pos > 10000 && pos < dur - 120000) all[currentId] = { p: pos, d: dur, t: Date.now() };
-    else if (ended || pos >= dur - 120000) delete all[currentId];
+    var old = all[currentId];
+    if (!ended && pos > 10000 && pos < dur - 120000) {
+      // Paused: the same place is not a new change (it would win over other devices).
+      if (old && old.p === pos) return;
+      all[currentId] = { p: pos, d: dur, t: Date.now() };
+    } else if (ended || pos >= dur - 120000) {
+      if (!old) return;
+      delete all[currentId];
+    } else {
+      return;
+    }
     ls.set('progress', JSON.stringify(all));
-    ls.set('dirty', '1');
+    changed();
   }
   function forget(id) {
     if (!id) return;
     try {
       var all = JSON.parse(ls.get('progress') || '{}') || {};
+      if (!(id in all)) return;
       delete all[id];
       ls.set('progress', JSON.stringify(all));
+      changed();
     } catch (e) { /* a bad entry is replaced by the next save */ }
   }
 
@@ -674,7 +715,7 @@
     // Back in front: pick up what this user watched on another device meanwhile.
     if (!document.hidden) { if (window.App && App.onResume) App.onResume(); return; }
     if (player && player.wrap.style.display === 'flex') { saveProgress(false); player.v.pause(); }
-    serial(function () { return uploadIfChanged(true); });
+    serial(function () { return syncUser(true, true); });
   });
 
   // ---------- the calls app.js makes ----------
@@ -686,8 +727,9 @@
     toast: function () { /* app.js shows its own */ },
     get: function (k) { return ls.get(k); },
     set: function (k, v) {
+      var same = ls.get(k) === v;
       ls.set(k, v);
-      if (SYNCED.indexOf(k) >= 0) ls.set('dirty', '1');
+      if (SYNCED.indexOf(k) >= 0 && !same) changed();
     },
     signIn: function () {
       if (tokenOk()) { toWorker(); tell('onSignIn', true, ''); return; }
@@ -737,7 +779,7 @@
     },
     logOut: function () {
       serial(async function () {
-        await uploadIfChanged(false);
+        await syncUser(true, false);
         if (ls.get('dirty') === '1') { tell('onLoggedOut', 'Could not save your progress to Drive. Check the connection and try again.'); return; }
         forgetUserData();
         tell('onLoggedOut', '');

@@ -1,13 +1,16 @@
 /* Luma Drive on the web. app.css is the Android app's, for a 1280px landscape page; this adds
-   what the app drew natively there (the page background, the player, the sign-in box), the
-   iPhone's safe areas (notch, home bar), and a phone layout. */
+   what the app drew natively there (the page background, the player, the sign-in box) and the
+   iPhone's safe areas (notch, home bar). The phone layout is in app.css, shared with Android. */
 
 html { background: var(--bg); }
 /* Safari on iPhone enlarges text in some blocks by itself; the design sets every size. */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
-#side { padding-top: calc(18px + env(safe-area-inset-top)); overflow-y: auto; }
-#main { padding-top: calc(26px + env(safe-area-inset-top)); }
+/* Wide screens only: this file loads after app.css, so on a phone it would undo the bottom bar. */
+@media (min-width: 821px) and (min-height: 501px) {
+  #side { padding-top: calc(18px + env(safe-area-inset-top)); overflow-y: auto; }
+  #main { padding-top: calc(26px + env(safe-area-inset-top)); }
+}
 /* Safari zooms into any text field under 16px; keep them at 16. */
 .box input, .bigsearch input { font-size: 16px; }
 
@@ -42,105 +45,3 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 .gate-box .h { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
 .gate-box p { color: var(--fg-2); margin: 0 0 20px; font-size: 15px; }
 .gate-box .btn { margin: 0; }
-
-/* ---- phone: the sidebar becomes a bottom bar, grids get fewer columns ---- */
-@media (max-width: 820px), (max-height: 500px) {
-  body { flex-direction: column; }
-  #main { padding: calc(16px + env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom)); }
-
-  #side {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; width: auto; height: auto; overflow: visible;
-    flex-direction: row; padding: 4px calc(4px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(4px + env(safe-area-inset-left));
-    border-right: 0; border-top: 1px solid var(--line-soft); background: var(--bg);
-  }
-  #side .brand, #side .side-fill, #side .side-sep, #side .provider, #side [data-go="recent"] { display: none; }
-  #side .nav, #side .nav.search-btn {
-    flex: 1; min-width: 0; flex-direction: column; justify-content: center; height: 54px; margin: 0; padding: 0;
-    border: 0; background: none; font-size: 10.5px; font-weight: 500; text-align: center; white-space: nowrap;
-  }
-  #side .nav .ic { margin: 0 0 3px; width: 22px; height: 22px; }
-  #side .nav.on { background: none; color: var(--accent); }
-  #side .nav.search-btn { order: 2; }
-  #side [data-go="home"] { order: 1; }
-  #side [data-go="movies"] { order: 3; }
-  #side [data-go="series"] { order: 4; }
-  #side [data-go="favorites"] { order: 5; }
-  #side [data-go="later"] { order: 6; }
-  #side [data-go="settings"] { order: 7; }
-
-  h1.ttl { font-size: 34px; }
-  .sub { font-size: 14px; }
-  h2 { font-size: 20px; }
-
-  .hero { flex-direction: column; height: auto; }
-  .hero .big { margin: 0 0 12px; padding: 22px; }
-  .tile .eyebrow { position: static; margin-bottom: 14px; }
-  .tile .big-ic { width: 44px; height: 44px; }
-  .tile .h { font-size: 44px; margin-top: 12px; }
-  .tile .p { margin-top: 8px; }
-  .hero .side { flex-direction: row; }
-  .hero .side .tile { padding: 16px; }
-  .hero .side .tile:first-child { margin: 0 12px 0 0; }
-  .side .tile .h { font-size: 24px; margin-top: 10px; }
-  .side .tile .p { display: none; }
-
-  .rail .card { width: 118px; margin-right: 10px; }
-  .card { width: calc((100% - 20px) / 3); margin: 0 10px 12px 0; }
-  .grid .card:nth-child(5n) { margin-right: 10px; }
-  .grid .card:nth-child(3n) { margin-right: 0; }
-  .card .meta { padding: 6px 8px 7px; }
-  .card .t { font-size: 12.5px; }
-  .card .s { font-size: 10px; }
-  .poster .ph { font-size: 28px; }
-
-  .filters { flex-wrap: wrap; }
-  .filters > * { margin: 0 8px 8px 0; }
-  .sel.w1 { width: auto; flex: 1; }
-  .filters .box { flex-basis: 100%; order: 3; margin-right: 0; }
-
-  .detail { margin: calc(-16px - env(safe-area-inset-top)) -16px 0; padding: calc(20px + env(safe-area-inset-top)) 16px 0; min-height: 0; }
-  .backdrop { height: 300px; }
-  .dposter { width: 110px; margin-right: 14px; align-self: flex-start; }
-  .dinfo h1 { font-size: 24px; }
-  .dmeta { font-size: 12.5px; margin-bottom: 12px; }
-  .dmeta span { display: inline-block; margin-right: 10px; }
-  .dacts { display: flex; flex-wrap: wrap; }
-  .dacts .btn { height: 38px; padding: 0 12px; margin: 0 8px 8px 0; font-size: 13.5px; }
-  .plot { font-size: 14px; }
-  .seasons { flex-wrap: nowrap; overflow-x: auto; margin: 18px 0 8px; }
-  .seasons .chip { flex: none; }
-  .ep .th { width: 112px; height: 63px; margin-right: 12px; }
-  .ep .nm { font-size: 14px; }
-  .ep .pl { font-size: 12px; }
-
-  .welcome { margin: 30px auto 0; padding: 30px 20px; }
-  .welcome .big { font-size: 40px; }
-
-  .set .panel { padding: 16px; }
-  .set .btn { margin-bottom: 8px; }
-  .setrow { flex-wrap: wrap; }
-  .swatches { flex-wrap: wrap; margin-top: 10px; }
-  .sw { margin: 0 8px 8px 0; }
-  .rename { flex-wrap: wrap; }
-  .rename .box { flex-basis: 100%; max-width: none; margin: 0 0 8px; }
-  .who { padding: 18px 16px; }
-  .who-btns { flex-wrap: wrap; }
-  .who-btns .btn { margin-bottom: 8px; }
-
-  .chips { flex-wrap: wrap; }
-  .chip { margin-bottom: 8px; }
-  .sheet, .sheet.mgr { left: 16px; right: 16px; width: auto; margin: 0; top: 12vh; height: 76vh; }
-  .sheet.dlg { left: 16px; right: 16px; width: auto; margin: 0; top: 30vh; height: auto; }
-  #toast { left: 16px; right: 16px; width: auto; margin-left: 0; bottom: calc(76px + env(safe-area-inset-bottom)); }
-}
-
-/* Phone on its side: wider, so five posters a row again. */
-@media (max-height: 500px) and (min-width: 600px) {
-  .card { width: calc((100% - 40px) / 5); }
-  .grid .card:nth-child(3n) { margin-right: 10px; }
-  .grid .card:nth-child(5n) { margin-right: 0; }
-  .hero { flex-direction: row; }
-  .hero .big { margin: 0 12px 0 0; }
-  .hero .side { flex-direction: column; }
-  .hero .side .tile:first-child { margin: 0 0 12px; }
-}

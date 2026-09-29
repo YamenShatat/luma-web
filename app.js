@@ -481,6 +481,13 @@
     if (msg) { $('#uerr').textContent = msg + (msg.indexOf('taken') > 0 ? ' If it is yours, tap Log in.' : ''); return; }
     chooseUser(name, true);
   };
+  // A full sync now, its result shown in the "Last sync" line (and the error, when there is one).
+  ACTS.syncnow = function () {
+    var el = $('#syncline');
+    if (el) el.textContent = 'Last sync: syncing…';
+    pendingUser = user;
+    N.selectUser(acct.root, user, false);
+  };
   ACTS.ulogout = function () { toast('Saving and logging out…'); N.logOut(); };
   ACTS.udelete = function () {
     modal.innerHTML = '<div class="sheet dlg"><div class="h">Delete ' + esc(user) + '?</div>' +
@@ -803,7 +810,8 @@
       '<h2>User</h2><div class="panel">' +
       (user ? '<div class="acct"><span class="xt">' + esc(user.charAt(0).toUpperCase()) + '</span><div style="flex:1"><div class="n">' + esc(user) + '</div>' +
         '<div class="u">Continue watching, favorites and watch later follow this name to any device.</div>' +
-        '<div class="u">Last sync: ' + esc(N.syncStatus ? N.syncStatus() || 'not yet' : 'not yet') + '</div></div></div>' +
+        '<div class="u" id="syncline">Last sync: ' + esc(N.syncStatus ? N.syncStatus() || 'not yet' : 'not yet') + '</div></div></div>' +
+        '<button class="f btn" data-act="syncnow">' + ic('refresh') + 'Sync now</button>' +
         '<div class="rename"><div class="box">' + ic('user') + '<input class="f" id="rname" type="text" maxlength="24" value="' + esc(user) + '" autocomplete="off" spellcheck="false"></div>' +
         '<button class="f btn" data-act="urename">Change username</button></div><div class="err" id="rerr">&nbsp;</div>' : '') +
       '<button class="f btn" data-act="ulogout">' + ic('logout') + 'Log out</button>' +
@@ -818,7 +826,7 @@
       '<button class="f btn danger" data-act="clear" data-f="later">' + ic('trash') + 'Clear watch later</button>' +
       '<button class="f btn danger" data-act="clear" data-f="cw">' + ic('trash') + 'Clear watching now</button></div>' +
       '<h2>About</h2><div class="panel">' +
-      '<div class="kv"><b>Luma Drive</b> ' + VERSION + '</div>' +
+      '<div class="kv"><b>Luma Drive</b> ' + VERSION + (N.build ? ' · web build ' + N.build : '') + '</div>' +
       '<div class="kv"><b>Details</b> This product uses the TMDB API but is not endorsed or certified by TMDB.</div>' +
       '<div class="kv"><b>Library</b> ' + (catalogReady ? num(counts.m) + ' movies · ' + num(counts.s) + ' series' : 'loading…') + '</div></div></div>';
     settle(r);

@@ -22,6 +22,12 @@ function getToken() {
 }
 
 self.addEventListener('fetch', function (e) {
+  // The page itself always comes fresh (its scripts carry version numbers), so a new version
+  // reaches the Home Screen app at its next start instead of an old copy kept by Safari.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(function () { return fetch(e.request); }));
+    return;
+  }
   var url = new URL(e.request.url);
   var m = url.pathname.match(/\/stream\/([\w-]+)$/);
   if (m) { e.respondWith(stream(m[1], +url.searchParams.get('size'), e.request.headers.get('Range'))); return; }

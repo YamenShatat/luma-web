@@ -694,6 +694,10 @@
     player.wrap.style.display = 'none';
     currentId = null;
     tell('onStopped');
+    // Send the new place now. The regular uploads skip quietly once the hour-long sign-in has
+    // expired (they must not pop up a sign-in box by themselves); here the user just tapped, so
+    // an expired sign-in may ask with "Continue".
+    serial(function () { return syncUser(true, false); });
   }
 
   /** As MainActivity.saveProgress: the place in ms; near the end (or ended) it is removed. */
@@ -767,7 +771,7 @@
     loadCatalog: function (root, force) {
       load(root, force).then(function () { tell('onCatalog', true, ''); }, function (e) { tell('onCatalog', false, errText(e)); });
     },
-    build: 6, // shown in Settings > About, to tell an old copy kept by Safari from the current one
+    build: 7, // shown in Settings > About, to tell an old copy kept by Safari from the current one
     syncStatus: function () { return ls.get('syncStatus') || ''; },
     api: api,
     url: function (id) { var f = fileOf[id]; return f ? 'stream/' + f.f + '?size=' + f.s : ''; },

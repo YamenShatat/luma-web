@@ -624,6 +624,17 @@
     }
     player.next.onclick = function () { jump(idx + 1); };
     player.prev.onclick = function () { jump(idx - 1); };
+    // The top bar shows on any tap and while paused, and fades 3 s later while playing.
+    var hideTimer = 0;
+    player.wake = function () {
+      wrap.classList.remove('idle');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () { if (!player.v.paused) wrap.classList.add('idle'); }, 3000);
+    };
+    wrap.addEventListener('touchstart', player.wake, { passive: true });
+    wrap.addEventListener('click', player.wake);
+    player.v.addEventListener('play', player.wake);
+    player.v.addEventListener('pause', player.wake);
     player.v.addEventListener('ended', onEnded);
     player.v.addEventListener('error', onError);
     return player;
@@ -636,6 +647,7 @@
     p.title.textContent = it.title.replace('\n', ' · ');
     p.next.style.display = i < spec.items.length - 1 ? '' : 'none';
     p.prev.style.display = i > 0 ? '' : 'none';
+    p.wake();
     p.v.src = it.url;
     if (startSec > 0) {
       var seek = function () { p.v.currentTime = startSec; p.v.removeEventListener('loadedmetadata', seek); };
@@ -771,7 +783,7 @@
     loadCatalog: function (root, force) {
       load(root, force).then(function () { tell('onCatalog', true, ''); }, function (e) { tell('onCatalog', false, errText(e)); });
     },
-    build: 7, // shown in Settings > About, to tell an old copy kept by Safari from the current one
+    build: 8, // shown in Settings > About, to tell an old copy kept by Safari from the current one
     syncStatus: function () { return ls.get('syncStatus') || ''; },
     api: api,
     url: function (id) { var f = fileOf[id]; return f ? 'stream/' + f.f + '?size=' + f.s : ''; },

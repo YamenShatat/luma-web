@@ -522,17 +522,28 @@
         // A change made while sending stays marked, for the next round.
         if (+(ls.get('changedAt') || 0) === mine) ls.set('dirty', '0');
         console.log('uploaded ' + user + ': ' + summary(o));
+        syncStatus("sent this device's changes to Drive");
       } else if (remote && theirs !== mine) {
         SYNCED.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } });
         SYNCED.forEach(function (k) { if (k in remote) ls.set(k, JSON.stringify(remote[k])); });
         ls.set('changedAt', String(theirs));
         ls.set('dirty', '0');
         console.log('took the newer copy of ' + user + ' from Drive: ' + summary(remote));
+        syncStatus('took the newer copy from Drive');
         if (window.App && App.onSynced) App.onSynced();
+      } else {
+        syncStatus('up to date');
       }
     } catch (e) {
       console.log('sync failed, will retry: ' + errText(e));
+      syncStatus('failed (' + errText(e) + '), will retry');
     }
+  }
+
+  /** The last sync's time and result, shown in Settings. */
+  function syncStatus(what) {
+    var d = new Date(), pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    ls.set('syncStatus', pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' — ' + what);
   }
 
   function selectUser(root, name, create) {
@@ -595,18 +606,24 @@
     var wrap = document.createElement('div');
     wrap.id = 'player';
     wrap.innerHTML = '<div class="pbar"><div class="ptitle"></div>' +
-      '<button class="pnext">Next episode ›</button><button class="pclose" aria-label="Close">✕</button></div>' +
+      '<button class="pnav pprev">‹ Previous</button><button class="pnav pnext">Next episode ›</button>' +
+      '<button class="pclose" aria-label="Close">✕</button></div>' +
       '<video playsinline controls autoplay preload="auto"></video>';
     document.body.appendChild(wrap);
-    player = { wrap: wrap, v: wrap.querySelector('video'), title: wrap.querySelector('.ptitle'), next: wrap.querySelector('.pnext') };
-    wrap.querySelector('.pclose').onclick = stop;
-    // As the tablet's next button: on to the next episode, keeping this one's place.
-    player.next.onclick = function () {
-      if (!spec || idx >= spec.items.length - 1) return;
-      saveProgress(false);
-      startItem(idx + 1, 0);
-      tell('onItem', idx);
+    player = {
+      wrap: wrap, v: wrap.querySelector('video'), title: wrap.querySelector('.ptitle'),
+      prev: wrap.querySelector('.pprev'), next: wrap.querySelector('.pnext')
     };
+    wrap.querySelector('.pclose').onclick = stop;
+    // As the tablet's buttons: to the next/previous episode, keeping this one's place.
+    function jump(to) {
+      if (!spec || to < 0 || to >= spec.items.length) return;
+      saveProgress(false);
+      startItem(to, 0);
+      tell('onItem', idx);
+    }
+    player.next.onclick = function () { jump(idx + 1); };
+    player.prev.onclick = function () { jump(idx - 1); };
     player.v.addEventListener('ended', onEnded);
     player.v.addEventListener('error', onError);
     return player;
@@ -618,6 +635,7 @@
     currentId = it.id;
     p.title.textContent = it.title.replace('\n', ' · ');
     p.next.style.display = i < spec.items.length - 1 ? '' : 'none';
+    p.prev.style.display = i > 0 ? '' : 'none';
     p.v.src = it.url;
     if (startSec > 0) {
       var seek = function () { p.v.currentTime = startSec; p.v.removeEventListener('loadedmetadata', seek); };
@@ -718,6 +736,11 @@
     serial(function () { return syncUser(true, true); });
   });
 
+  // A Home Screen app can also come back restored from memory, without a visibility change.
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted && window.App && App.onResume) App.onResume();
+  });
+
   // ---------- the calls app.js makes ----------
 
   window.Native = {
@@ -744,6 +767,7 @@
     loadCatalog: function (root, force) {
       load(root, force).then(function () { tell('onCatalog', true, ''); }, function (e) { tell('onCatalog', false, errText(e)); });
     },
+    syncStatus: function () { return ls.get('syncStatus') || ''; },
     api: api,
     url: function (id) { var f = fileOf[id]; return f ? 'stream/' + f.f + '?size=' + f.s : ''; },
     search: search,

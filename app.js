@@ -707,6 +707,15 @@
     setLastEp(it.id, eps[index]);
     N.play(JSON.stringify({ index: index, start: pr ? pr.p : 0, items: list }));
   }
+  // The open show page after its progress changed (a video stopped, or another device's newer
+  // copy arrived): the Continue button, the season it points at, and the episode list.
+  function refreshShow() {
+    if (cur.v !== 'show' || !$('#eps')) return;
+    var le = lastEp[cur.a.id], b = $('[data-act="splay"]');
+    if (le && showState.eps[le.s]) showState.season = le.s;
+    if (b) b.innerHTML = ic('play') + (le ? 'Continue S' + le.s + ' E' + le.num : 'Play');
+    renderSeasons();
+  }
   function setLastEp(seriesId, ep) {
     lastEp[seriesId] = ep;
     store.set('lastEp', lastEp);
@@ -793,7 +802,8 @@
       '<button class="f btn" data-act="gsign">' + ic('folder') + 'Change folder</button></div>' +
       '<h2>User</h2><div class="panel">' +
       (user ? '<div class="acct"><span class="xt">' + esc(user.charAt(0).toUpperCase()) + '</span><div style="flex:1"><div class="n">' + esc(user) + '</div>' +
-        '<div class="u">Continue watching, favorites and watch later follow this name to any device.</div></div></div>' +
+        '<div class="u">Continue watching, favorites and watch later follow this name to any device.</div>' +
+        '<div class="u">Last sync: ' + esc(N.syncStatus ? N.syncStatus() || 'not yet' : 'not yet') + '</div></div></div>' +
         '<div class="rename"><div class="box">' + ic('user') + '<input class="f" id="rname" type="text" maxlength="24" value="' + esc(user) + '" autocomplete="off" spellcheck="false"></div>' +
         '<button class="f btn" data-act="urename">Change username</button></div><div class="err" id="rerr">&nbsp;</div>' : '') +
       '<button class="f btn" data-act="ulogout">' + ic('logout') + 'Log out</button>' +
@@ -998,9 +1008,10 @@
       if (!err) knownUsers = JSON.parse(json);
     },
     // The app came back to the front: pick up what this user watched on another device
-    // meanwhile. Not while a video plays, nor right after start (start-up already did it).
+    // meanwhile (also with a video left open; nothing is redrawn under it). Not right after
+    // start, which already did it.
     onResume: function () {
-      if (!acct || !user || nowPlaying || Date.now() - bootAt < 10000) return;
+      if (!acct || !user || Date.now() - bootAt < 10000) return;
       pendingUser = user;
       N.selectUser(acct.root, user, false);
     },
@@ -1010,7 +1021,7 @@
       reloadUserData();
       if (nowPlaying) return;
       if (cur.v === 'movie') movieButtons(cur.a);
-      else if (cur.v === 'show' && $('#eps')) renderSeasons();
+      else if (cur.v === 'show') refreshShow();
       else if (cur.v !== 'who') show(cur.v, cur.a, snapshot());
     },
     onLoggedOut: function (err) {
@@ -1088,12 +1099,7 @@
       nowPlaying = null;
       reloadWatch();
       if (cur.v === 'movie') movieButtons(cur.a);
-      if (cur.v === 'show' && $('#eps')) {
-        var le = lastEp[cur.a.id], b = $('[data-act="splay"]');
-        if (le && showState.eps[le.s]) showState.season = le.s;
-        if (b && le) b.innerHTML = ic('play') + 'Continue S' + le.s + ' E' + le.num;
-        renderSeasons();
-      }
+      refreshShow();
     },
     onCatalog: function (ok, msg) {
       catalogReady = ok;

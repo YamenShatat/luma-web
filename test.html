@@ -52,7 +52,8 @@
           h += '<div class="file">' + f.name.replace(/</g, '&lt;') + '<br>' +
             '<button onclick="tryA(\'' + f.id + '\')">A: token in address</button>' +
             '<button onclick="tryB(\'' + f.id + '\')">B: background helper</button>' +
-            '<button onclick="tryC(\'' + f.id + '\')">C: Drive player</button></div>';
+            '<button onclick="tryC(\'' + f.id + '\')">C: Drive player</button>' +
+            '<button onclick="diagnose(\'' + f.id + '\')">D: diagnose</button></div>';
         });
         $('files').innerHTML = h || 'No videos found.';
       })
@@ -84,6 +85,32 @@
     $('out').innerHTML = '<p>C: Drive player. Does the video play inside the box?</p>' +
       '<iframe src="https://drive.google.com/file/d/' + id + '/preview" allow="autoplay; fullscreen" allowfullscreen></iframe>';
     $('out').scrollIntoView();
+  }
+
+  // Asks Drive for the first bytes each way and shows what came back, since a failed <video>
+  // only says "error 4".
+  function diagnose(id) {
+    $('out').innerHTML = '<div class="result" id="dg">Checking…</div>';
+    var lines = [];
+    function show() { $('dg').innerHTML = lines.join('<br>'); $('out').scrollIntoView(); }
+    function check(label, url, opts) {
+      return fetch(url, opts).then(function (r) {
+        return r.text().then(function (t) {
+          lines.push(label + ': ' + r.status + ' ' + (r.headers.get('content-type') || '') + ' ' + (r.status >= 400 ? t.slice(0, 120).replace(/</g, '&lt;') : ''));
+        });
+      }).catch(function (e) { lines.push(label + ': failed to fetch (' + e + ')'); });
+    }
+    var range = { 'Range': 'bytes=0-99' };
+    check('1 header sign-in', media(id), { headers: { Authorization: 'Bearer ' + token, Range: 'bytes=0-99' } })
+      .then(function () { return check('2 token in address', media(id) + '&access_token=' + encodeURIComponent(token), { headers: range }); })
+      .then(function () {
+        lines.push('3 helper running: ' + !!(navigator.serviceWorker && navigator.serviceWorker.controller));
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage(token);
+          return check('4 through helper', media(id) + '&sw=1', { headers: range });
+        }
+      })
+      .then(function () { lines.push('Browser: ' + navigator.userAgent.replace(/</g, '&lt;')); show(); });
   }
 
   function startWorker() {

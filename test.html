@@ -34,17 +34,19 @@
         if (r.error) { $('st').textContent = '❌ Sign-in error: ' + r.error; return; }
         token = r.access_token;
         $('st').textContent = '✅ Signed in.';
-        startWorker();
         listVideos();
+        try { startWorker(); } catch (e) { /* B reports it */ }
       }
     }).requestAccessToken();
   };
 
   function listVideos() {
-    var q = encodeURIComponent("mimeType contains 'video/' and trashed=false");
+    $('files').textContent = 'Loading videos…';
+    var q = encodeURIComponent("mimeType = 'video/mp4' and trashed = false");
     fetch('https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(id,name)&q=' + q, { headers: { Authorization: 'Bearer ' + token } })
-      .then(function (r) { return r.json(); })
+      .then(function (r) { return r.json().then(function (d) { d.httpStatus = r.status; return d; }); })
       .then(function (d) {
+        if (d.error) { $('files').textContent = '❌ Drive said ' + d.httpStatus + ': ' + (d.error.message || JSON.stringify(d.error)); return; }
         var h = '';
         (d.files || []).forEach(function (f) {
           h += '<div class="file">' + f.name.replace(/</g, '&lt;') + '<br>' +

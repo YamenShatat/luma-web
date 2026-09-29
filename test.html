@@ -43,7 +43,7 @@
   function listVideos() {
     $('files').textContent = 'Loading videos…';
     var q = encodeURIComponent("mimeType = 'video/mp4' and trashed = false");
-    fetch('https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(id,name)&q=' + q, { headers: { Authorization: 'Bearer ' + token } })
+    fetch('https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(id,name,size)&q=' + q, { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { return r.json().then(function (d) { d.httpStatus = r.status; return d; }); })
       .then(function (d) {
         if (d.error) { $('files').textContent = '❌ Drive said ' + d.httpStatus + ': ' + (d.error.message || JSON.stringify(d.error)); return; }
@@ -53,7 +53,8 @@
             '<button onclick="tryA(\'' + f.id + '\')">A: token in address</button>' +
             '<button onclick="tryB(\'' + f.id + '\')">B: background helper</button>' +
             '<button onclick="tryC(\'' + f.id + '\')">C: Drive player</button>' +
-            '<button onclick="diagnose(\'' + f.id + '\')">D: diagnose</button></div>';
+            '<button onclick="diagnose(\'' + f.id + '\')">D: diagnose</button>' +
+            '<button onclick="tryE(\'' + f.id + '\',' + (+f.size) + ')">E: helper, own address</button></div>';
         });
         $('files').innerHTML = h || 'No videos found.';
       })
@@ -79,6 +80,15 @@
     }
     navigator.serviceWorker.controller.postMessage(token);
     play(media(id) + '&sw=1', 'B');
+  }
+
+  function tryE(id, size) {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+      $('out').innerHTML = '<div class="result">❌ E: the background helper is not running (reload the page once, sign in again, then try E)</div>';
+      return;
+    }
+    navigator.serviceWorker.controller.postMessage(token);
+    play('stream/' + id + '?size=' + size, 'E');
   }
 
   function tryC(id) {

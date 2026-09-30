@@ -71,14 +71,20 @@
   function ic(n, cls) {
     return '<svg class="ic ' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">' + P[n] + '</svg>';
   }
-  // The Luma mark. Its gradient stops read --lg*/--lp*/--lsh, which applyAccent sets from the
-  // accent colour; app.css holds the original colours as the default.
-  var LOGO = '<svg viewBox="280 190 500 550"><defs>' +
-    '<linearGradient id="lumaL" gradientUnits="userSpaceOnUse" x1="290" y1="215" x2="700" y2="720"><stop style="stop-color:var(--lg1)"/><stop offset=".48" style="stop-color:var(--lg2)"/><stop offset="1" style="stop-color:var(--lg3)"/></linearGradient>' +
-    '<linearGradient id="lumaP" gradientUnits="userSpaceOnUse" x1="520" y1="350" x2="760" y2="520"><stop style="stop-color:var(--lp1)"/><stop offset=".55" style="stop-color:var(--lp2)"/><stop offset="1" style="stop-color:var(--lp3)"/></linearGradient></defs>' +
-    '<path d="M365 214C330 226 307 260 307 300V577C307 667 381 733 471 712L665 665C602 644 546 619 499 590C422 544 385 487 385 411V235C385 218 378 210 365 214Z" fill="url(#lumaL)"/>' +
-    '<path d="M385 403C398 480 441 536 514 579C556 604 606 627 665 665L471 712C381 733 307 667 307 577V509C329 535 358 552 393 558C430 565 465 555 493 532C433 496 399 453 385 403Z" style="fill:var(--lsh)" fill-opacity=".62"/>' +
-    '<path d="M524 348C524 323 551 308 572 321L744 427C764 439 764 468 744 480L572 586C551 599 524 584 524 559V348Z" fill="url(#lumaP)"/></svg>';
+  // The yamDRIVE mark (yamtv_logo.svg): a play button with a y cut through it and a comet orbit.
+  // Its colours read --lg* (button) and --lp* (orbit), which applyAccent sets from the accent
+  // colour; app.css holds the logo's own cyan as the default. The dark strokes are the page
+  // background, the gap where the comet passes in front of the button.
+  var LOGO = '<svg viewBox="36 114 440 296"><defs>' +
+    '<linearGradient id="ymPlay" gradientUnits="userSpaceOnUse" x1="80" y1="60" x2="440" y2="470"><stop style="stop-color:var(--lg1)"/><stop offset=".55" style="stop-color:var(--lg2)"/><stop offset="1" style="stop-color:var(--lg3)"/></linearGradient>' +
+    '<linearGradient id="ymRing" gradientUnits="userSpaceOnUse" x1="40" y1="120" x2="470" y2="400"><stop style="stop-color:var(--lp1)"/><stop offset=".55" style="stop-color:var(--lp2)"/><stop offset="1" style="stop-color:var(--lp3)"/></linearGradient>' +
+    '<linearGradient id="ymTail" gradientUnits="userSpaceOnUse" x1="-222" y1="0" x2="222" y2="0"><stop style="stop-color:var(--lp1)" stop-opacity="0"/><stop offset=".6" style="stop-color:var(--lp2)" stop-opacity=".7"/><stop offset="1" style="stop-color:var(--lp2)"/></linearGradient>' +
+    '<mask id="ymCut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><rect width="512" height="512" fill="#fff"/><path d="M146 136L246 278L342 136M246 278Q214 330 150 372" fill="none" stroke="#000" stroke-width="18"/></mask></defs>' +
+    '<g transform="translate(256 262) rotate(-24)"><path d="M-222 0A222 74 0 0 1 222 0" fill="none" stroke="url(#ymTail)" stroke-width="22" stroke-linecap="round"/></g>' +
+    '<path d="M186 142L186 382L372 262Z" fill="url(#ymPlay)" stroke="url(#ymPlay)" stroke-width="48" stroke-linejoin="round" mask="url(#ymCut)"/>' +
+    '<g transform="translate(256 262) rotate(-24)" fill="none"><path d="M222 0A222 74 0 0 1 60 71" style="stroke:var(--bg)" stroke-width="44" stroke-linecap="round"/>' +
+    '<path d="M222 0A222 74 0 0 1 60 71" stroke="url(#ymRing)" stroke-width="22" stroke-linecap="round"/>' +
+    '<circle cx="60" cy="71" r="30" style="fill:var(--bg)"/><circle cx="60" cy="71" r="20" style="fill:var(--lp1)"/></g></svg>';
 
   // ---------- state ----------
 
@@ -91,7 +97,7 @@
   // Accent colour (Settings > Appearance). All light enough for the dark text used on accent fills.
   // The native parts (player bar, dialogs) read prefs.accent from the same saved prefs.
   var ACCENTS = [
-    ['#ec92e5', 'Purple (default)'], ['#b197fc', 'Violet'], ['#74c0fc', 'Blue'], ['#66d9e8', 'Cyan'],
+    ['#66d9e8', 'Cyan (default)'], ['#ec92e5', 'Purple'], ['#b197fc', 'Violet'], ['#74c0fc', 'Blue'],
     ['#63e6be', 'Teal'], ['#8ce99a', 'Green'], ['#ffd43b', 'Yellow'], ['#ffa94d', 'Orange'], ['#ff8787', 'Red']
   ];
   function applyAccent(hex) {
@@ -101,7 +107,7 @@
     s.setProperty('--accent-rgb', rgb);
     s.setProperty('--accent-soft', 'rgba(' + rgb + ', 0.18)');
     // Logo: light-to-deep shades of the accent, which read as that colour in every case.
-    var h = hueOf(n), sat = Math.max(satOf(n), 70), L = { lg1: 73, lg2: 61, lg3: 51, lp1: 73, lp2: 69, lp3: 63, lsh: 56 };
+    var h = hueOf(n), sat = Math.max(satOf(n), 70), L = { lg1: 73, lg2: 61, lg3: 51, lp1: 80, lp2: 69, lp3: 63 };
     for (var k in L) {
       s.setProperty('--' + k, 'hsl(' + h + ', ' + sat + '%, ' + L[k] + '%)');
     }
@@ -826,7 +832,7 @@
       '<button class="f btn danger" data-act="clear" data-f="later">' + ic('trash') + 'Clear watch later</button>' +
       '<button class="f btn danger" data-act="clear" data-f="cw">' + ic('trash') + 'Clear watching now</button></div>' +
       '<h2>About</h2><div class="panel">' +
-      '<div class="kv"><b>Luma Drive</b> ' + VERSION + (N.build ? ' · web build ' + N.build : '') + '</div>' +
+      '<div class="kv"><b>yamDRIVE</b> ' + VERSION + (N.build ? ' · web build ' + N.build : '') + '</div>' +
       '<div class="kv"><b>Details</b> This product uses the TMDB API but is not endorsed or certified by TMDB.</div>' +
       '<div class="kv"><b>Library</b> ' + (catalogReady ? num(counts.m) + ' movies · ' + num(counts.s) + ' series' : 'loading…') + '</div></div></div>';
     settle(r);
@@ -951,7 +957,7 @@
   // ---------- sidebar ----------
 
   function renderSide() {
-    var h = '<div class="brand">' + LOGO + '<b><span>L</span>uma</b></div>' +
+    var h = '<div class="brand">' + LOGO + '<b><span>y</span>amDRIVE</b></div>' +
       '<button class="f nav search-btn" data-go="search">' + ic('search') + 'Search</button>';
     each(NAV, function (n) { h += '<button class="f nav" data-go="' + n[0] + '">' + ic(n[2]) + n[1] + '</button>'; });
     h += '<div class="side-fill"></div>';
@@ -967,7 +973,7 @@
 
   // Back on Home asks first; Back while it is open just closes it.
   function confirmExit() {
-    modal.innerHTML = '<div class="sheet dlg"><div class="h">Exit Luma?</div>' +
+    modal.innerHTML = '<div class="sheet dlg"><div class="h">Exit yamDRIVE?</div>' +
       '<p>Are you sure you want to exit?</p><div class="dlg-btns">' +
       '<button class="f btn primary" data-act="exitok">OK</button>' +
       '<button class="f btn" data-act="exitno">Cancel</button></div></div>';

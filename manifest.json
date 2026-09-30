@@ -1,6 +1,6 @@
 {
-  "name": "Luma",
-  "short_name": "Luma",
+  "name": "yamDRIVE",
+  "short_name": "yamDRIVE",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

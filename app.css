@@ -18,13 +18,13 @@
   --fg-2: #b2b8be;
   --fg-3: #7b8187;
   /* The accent is set from Settings > Appearance (app.js applyAccent); these are the default. */
-  --accent: #ec92e5;
-  --accent-rgb: 236, 146, 229;
+  --accent: #66d9e8;
+  --accent-rgb: 102, 217, 232;
   --accent-soft: rgba(var(--accent-rgb), 0.18);
-  /* Luma logo: shades of the accent (these are the default purple's; app.js applyAccent). */
-  --lg1: #ea8ae2; --lg2: #e156d6; --lg3: #da2bcb;
-  --lp1: #ea8ae2; --lp2: #e779de; --lp3: #e35fd8;
-  --lsh: #dd40d0;
+  /* yamDRIVE logo: button (lg) and orbit (lp) shades; these are yamtv_logo.svg's own cyan,
+     and app.js applyAccent replaces them with the chosen accent's. */
+  --lg1: #87e1ed; --lg2: #52d4e5; --lg3: #26c9df;
+  --lp1: #a6e9f2; --lp2: #75ddea; --lp3: #5bd6e6;
   --ok: #65d49e;
   --bad: #f08080;
 }
@@ -60,7 +60,7 @@ button { background: none; border: 0; padding: 0; cursor: pointer; text-align: l
 }
 /* The name like the page titles: bold, with the first letter in the accent colour. */
 .brand { display: flex; align-items: center; padding: 0 8px 16px; font-size: 21px; letter-spacing: -0.03em; }
-.brand svg { height: 30px; width: 27px; margin-right: 9px; flex: none; }
+.brand svg { height: 28px; width: 42px; margin-right: 8px; flex: none; }
 .brand b { font-weight: 700; }
 .brand b span { color: var(--accent); }
 
